@@ -4,7 +4,7 @@
 *.snapshots/
 # Visual Studio Code settings
 
-
+.alcache/
 
 # User-specific files
 
