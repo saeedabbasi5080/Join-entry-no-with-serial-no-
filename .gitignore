@@ -1,0 +1,23 @@
+# AL / Business Central artifacts
+
+*.alpackages/
+*.snapshots/
+# Visual Studio Code settings
+
+
+
+# User-specific files
+
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Build output
+out/
+bin/
+obj/
+publish/
+
+rad.json
+*.app
