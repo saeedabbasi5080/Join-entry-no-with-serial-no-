@@ -1,4 +1,4 @@
-pageextension 50420 ItemTrackingLinesExt extends "Item Tracking Lines"
+pageextension 50120 ItemTrackingLinesExt extends "Item Tracking Lines"
 {
     actions
     {
@@ -11,8 +11,11 @@ pageextension 50420 ItemTrackingLinesExt extends "Item Tracking Lines"
                 ApplicationArea = All;
 
                 trigger OnAction()
+                var
+                    ItemTrackingEventSub: Codeunit ItemTrackingEventSubscriber;
                 begin
-                    AssignSerialsFromLedgerSimple();
+                    // Call the auto-assign logic directly from Event Subscriber
+                    ItemTrackingEventSub.AutoAssignSerials(Rec);
                 end;
             }
         }

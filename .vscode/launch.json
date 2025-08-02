@@ -6,8 +6,8 @@
             "request": "launch",
             "type": "al",
             "environmentType": "OnPrem",
-            "server": "http://bc2019",
-            "serverInstance": "bc2019",
+            "server": "http://localhost:8080/BC190/",
+            "serverInstance": "BC190",
             "authentication": "Windows",
             "startupObjectId": 22,
             "startupObjectType": "Page",
@@ -17,7 +17,7 @@
             "enableSqlInformationDebugger": true,
             "tenant": "default",
             "usePublicURLFromServer": true,
-            "port": 7095,
+            "port": 7049,
             "schemaUpdateMode": "Recreate"
         }
     ]
