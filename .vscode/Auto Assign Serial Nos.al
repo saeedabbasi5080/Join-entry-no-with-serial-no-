@@ -11,59 +11,26 @@ pageextension 50120 ItemTrackingLinesExt extends "Item Tracking Lines"
                 ApplicationArea = All;
 
                 trigger OnAction()
-                var
-                    ItemTrackingEventSub: Codeunit ItemTrackingEventSubscriber;
                 begin
-                    // Call the auto-assign logic directly from Event Subscriber
-                    ItemTrackingEventSub.AutoAssignSerials(Rec);
+                    AssignSerialsFromLedgerSimple();
                 end;
             }
         }
     }
 
-    trigger OnDeleteRecord(): Boolean
-    var
-        TrackingSpec: Record "Tracking Specification";
-        SerialNo: Code[50];
-    begin
-        // Only delete the selected serial
-        if Rec."Serial No." = '' then begin
-            Message('Please select a serial first.');
-            exit(false);
-        end;
-
-        SerialNo := Rec."Serial No.";
-
-        // Use the same successful logic as before
-        TrackingSpec.Reset();
-        TrackingSpec.SetRange("Source Type", Rec."Source Type");
-        TrackingSpec.SetRange("Source ID", Rec."Source ID");
-        TrackingSpec.SetRange("Source Ref. No.", Rec."Source Ref. No.");
-        TrackingSpec.SetRange("Serial No.", SerialNo); // Only selected serial
-
-        if TrackingSpec.FindFirst() then begin
-            if TrackingSpec.Delete() then begin
-                CurrPage.Update(true);
-                Message('Serial %1 deleted.', SerialNo);
-            end else begin
-                Message('Error deleting serial %1', SerialNo);
-            end;
-        end else begin
-            Message('Serial %1 not found.', SerialNo);
-        end;
-
-        exit(false); // Return false because we handled the delete ourselves
-    end;
-
-    var
-        SalesLine: Record "Sales Line";
-        Item: Record Item;
-        ItemLE: Record "Item Ledger Entry";
-        foundCount: Integer;
-
     local procedure AssignSerialsFromLedgerSimple()
     var
         CurrentSalesLine: Record "Sales Line";
+        TrackingSpec: Record "Tracking Specification";
+        ItemLedgEntry: Record "Item Ledger Entry";
+        ReservEntry: Record "Reservation Entry";
+        Item: Record Item;
+        NextEntryNo: Integer;
+        ExistingQty: Decimal;
+        RemainingQty: Decimal;
+        nNeeded: Decimal;
+        foundCount: Integer;
+        hasFound: Boolean;
     begin
         // 1. Find current sales order line
         Clear(CurrentSalesLine);
@@ -87,26 +54,7 @@ pageextension 50120 ItemTrackingLinesExt extends "Item Tracking Lines"
             exit;
         end;
 
-        // 3. Main execution - always work with Tracking Specification
-        AssignToTrackingSpec(CurrentSalesLine);
-    end;
-
-    local procedure AssignToTrackingSpec(CurrentSalesLine: Record "Sales Line")
-    var
-        hasFound: Boolean;
-        TrackingSpec: Record "Tracking Specification";
-        NextEntryNo: Integer;
-        NewTrackingSpec: Record "Tracking Specification";
-        ExistingQty: Decimal;
-        RemainingQty: Decimal;
-        ItemLedgEntry: Record "Item Ledger Entry";
-        ReservEntry: Record "Reservation Entry";
-        nNeeded: Decimal;
-    begin
-        // First convert Reservation Entries to Tracking Specification
-        ConvertReservationToTrackingSpec(CurrentSalesLine);
-
-        // Calculate existing quantity in Item Tracking Lines
+        // 3. Calculate existing quantity in Item Tracking Lines
         ExistingQty := 0;
         TrackingSpec.Reset();
         TrackingSpec.SetRange("Source Type", Rec."Source Type");
@@ -117,7 +65,7 @@ pageextension 50120 ItemTrackingLinesExt extends "Item Tracking Lines"
                 ExistingQty += Abs(TrackingSpec."Quantity (Base)");
             until TrackingSpec.Next() = 0;
 
-        // Calculate remaining quantity
+        // 4. Calculate remaining quantity
         nNeeded := Abs(CurrentSalesLine."Quantity (Base)");
         RemainingQty := nNeeded - ExistingQty;
 
@@ -126,7 +74,7 @@ pageextension 50120 ItemTrackingLinesExt extends "Item Tracking Lines"
             exit;
         end;
 
-        // Find last Entry No
+        // 5. Find last Entry No
         TrackingSpec.Reset();
         TrackingSpec.SetRange("Source Type", Rec."Source Type");
         TrackingSpec.SetRange("Source ID", Rec."Source ID");
@@ -138,7 +86,7 @@ pageextension 50120 ItemTrackingLinesExt extends "Item Tracking Lines"
 
         foundCount := 0;
 
-        // Search Item Ledger Entries
+        // 6. Search Item Ledger Entries and create tracking specifications
         Clear(ItemLedgEntry);
         ItemLedgEntry.SetRange("Item No.", CurrentSalesLine."No.");
         ItemLedgEntry.SetRange("Entry Type", ItemLedgEntry."Entry Type"::Purchase);
@@ -179,125 +127,45 @@ pageextension 50120 ItemTrackingLinesExt extends "Item Tracking Lines"
                 end;
 
                 if hasFound then begin
-                    // Create new record
-                    Clear(NewTrackingSpec);
-                    NewTrackingSpec.Init();
-                    NewTrackingSpec."Entry No." := NextEntryNo;
-                    NewTrackingSpec."Source Type" := Rec."Source Type";
-                    NewTrackingSpec."Source Subtype" := Rec."Source Subtype";
-                    NewTrackingSpec."Source ID" := Rec."Source ID";
-                    NewTrackingSpec."Source Batch Name" := Rec."Source Batch Name";
-                    NewTrackingSpec."Source Prod. Order Line" := Rec."Source Prod. Order Line";
-                    NewTrackingSpec."Source Ref. No." := Rec."Source Ref. No.";
-                    NewTrackingSpec."Item No." := ItemLedgEntry."Item No.";
-                    NewTrackingSpec."Variant Code" := ItemLedgEntry."Variant Code";
-                    NewTrackingSpec."Location Code" := ItemLedgEntry."Location Code";
-                    NewTrackingSpec."Serial No." := ItemLedgEntry."Serial No.";
-                    NewTrackingSpec."Lot No." := ItemLedgEntry."Lot No.";
+                    // Create new record directly in Rec
+                    // Rec.Init();
+                    // Rec."Entry No." := NextEntryNo;
+                    // Rec."Source Type" := Rec."Source Type";
+                    // Rec."Source Subtype" := Rec."Source Subtype";
+                    // Rec."Source ID" := Rec."Source ID";
+                    // Rec."Source Batch Name" := Rec."Source Batch Name";
+                    // Rec."Source Prod. Order Line" := Rec."Source Prod. Order Line";
+                    // Rec."Source Ref. No." := Rec."Source Ref. No.";
+                    // Rec."Item No." := ItemLedgEntry."Item No.";
+                    // Rec."Variant Code" := ItemLedgEntry."Variant Code";
+                    // Rec."Location Code" := ItemLedgEntry."Location Code";
+                    Rec.Validate("Serial No.", ItemLedgEntry."Serial No.");
+                    // Rec."Lot No." := ItemLedgEntry."Lot No.";
 
                     // Set quantities (negative for Sales Order)
-                    NewTrackingSpec."Quantity (Base)" := -1;
-                    NewTrackingSpec."Qty. to Handle (Base)" := -1;
-                    NewTrackingSpec."Qty. to Invoice (Base)" := -1;
+                    Rec."Quantity (Base)" := 1;
+                    // Rec."Qty. to Handle (Base)" := -1;
+                    // Rec."Qty. to Invoice (Base)" := -1;
 
-                    NewTrackingSpec."Expiration Date" := ItemLedgEntry."Expiration Date";
-                    NewTrackingSpec."Warranty Date" := ItemLedgEntry."Warranty Date";
-                    NewTrackingSpec."Creation Date" := Today;
+                    // Rec."Expiration Date" := ItemLedgEntry."Expiration Date";
+                    // Rec."Warranty Date" := ItemLedgEntry."Warranty Date";
+                    // Rec."Creation Date" := Today;
 
-                    if NewTrackingSpec.Insert() then begin
-                        foundCount += 1;
-                        NextEntryNo += 1;
-                    end;
+                    Rec.Insert();
+                    foundCount += 1;
+                    NextEntryNo += 1;
                 end;
             until ItemLedgEntry.Next() = 0;
 
-        // Update page
-        CurrPage.Update(false);
-
-        ShowResult(foundCount, RemainingQty, ExistingQty, nNeeded);
-    end;
-
-    local procedure ConvertReservationToTrackingSpec(CurrentSalesLine: Record "Sales Line")
-    var
-        ReservEntry: Record "Reservation Entry";
-        TrackingSpec: Record "Tracking Specification";
-        NewTrackingSpec: Record "Tracking Specification";
-        NextEntryNo: Integer;
-    begin
-        // Check if Reservation Entry exists
-        ReservEntry.SetSourceFilter(
-            Rec."Source Type",
-            Rec."Source Subtype",
-            Rec."Source ID",
-            Rec."Source Ref. No.",
-            false);
-        ReservEntry.SetRange("Reservation Status", ReservEntry."Reservation Status"::Reservation);
-        ReservEntry.SetFilter("Serial No.", '<>%1', '');
-
-        if ReservEntry.IsEmpty() then
-            exit; // No Reservation Entry exists
-
-        // Find last Entry No in Tracking Spec
-        TrackingSpec.Reset();
-        TrackingSpec.SetRange("Source Type", Rec."Source Type");
-        TrackingSpec.SetRange("Source ID", Rec."Source ID");
-        TrackingSpec.SetRange("Source Ref. No.", Rec."Source Ref. No.");
-        if TrackingSpec.FindLast() then
-            NextEntryNo := TrackingSpec."Entry No." + 1
+        // 7. Show result
+        if foundCount = 0 then
+            Message('No available serials found.')
         else
-            NextEntryNo := 1;
-
-        // Convert each Reservation Entry to Tracking Specification
-        if ReservEntry.FindSet() then
-            repeat
-                // Check if this serial already exists in Tracking Spec
-                TrackingSpec.Reset();
-                TrackingSpec.SetRange("Source Type", Rec."Source Type");
-                TrackingSpec.SetRange("Source ID", Rec."Source ID");
-                TrackingSpec.SetRange("Source Ref. No.", Rec."Source Ref. No.");
-                TrackingSpec.SetRange("Serial No.", ReservEntry."Serial No.");
-
-                if TrackingSpec.IsEmpty() then begin
-                    // Create new Tracking Specification
-                    Clear(NewTrackingSpec);
-                    NewTrackingSpec.Init();
-                    NewTrackingSpec."Entry No." := NextEntryNo;
-                    NewTrackingSpec."Source Type" := ReservEntry."Source Type";
-                    NewTrackingSpec."Source Subtype" := ReservEntry."Source Subtype";
-                    NewTrackingSpec."Source ID" := ReservEntry."Source ID";
-                    NewTrackingSpec."Source Batch Name" := Rec."Source Batch Name";
-                    NewTrackingSpec."Source Prod. Order Line" := Rec."Source Prod. Order Line";
-                    NewTrackingSpec."Source Ref. No." := ReservEntry."Source Ref. No.";
-                    NewTrackingSpec."Item No." := ReservEntry."Item No.";
-                    NewTrackingSpec."Variant Code" := ReservEntry."Variant Code";
-                    NewTrackingSpec."Location Code" := ReservEntry."Location Code";
-                    NewTrackingSpec."Serial No." := ReservEntry."Serial No.";
-                    NewTrackingSpec."Lot No." := ReservEntry."Lot No.";
-                    NewTrackingSpec."Quantity (Base)" := ReservEntry."Quantity (Base)";
-                    NewTrackingSpec."Qty. to Handle (Base)" := ReservEntry."Quantity (Base)";
-                    NewTrackingSpec."Qty. to Invoice (Base)" := ReservEntry."Quantity (Base)";
-                    NewTrackingSpec."Expiration Date" := ReservEntry."Expiration Date";
-                    NewTrackingSpec."Warranty Date" := ReservEntry."Warranty Date";
-                    NewTrackingSpec."Creation Date" := Today;
-
-                    if NewTrackingSpec.Insert() then
-                        NextEntryNo += 1;
-                end;
-            until ReservEntry.Next() = 0;
-    end;
-
-    local procedure ShowResult(FoundCount: Integer; RemainingQty: Decimal; ExistingQty: Decimal; TotalNeeded: Decimal)
-    begin
-        if FoundCount = 0 then begin
-            Message('No available serials found.');
-            exit;
-        end;
-
-        if FoundCount < RemainingQty then
-            Message('Only %1 serials out of %2 needed were found and added.\nTotal assigned: %3 of %4',
-                FoundCount, RemainingQty, ExistingQty + FoundCount, TotalNeeded)
-        else
-            Message('%1 serials successfully added.\nTotal assigned: %2 of %3',
-                FoundCount, ExistingQty + FoundCount, TotalNeeded);
+            if foundCount < RemainingQty then
+                Message('Only %1 serials out of %2 needed were found and added.\nTotal assigned: %3 of %4',
+                    foundCount, RemainingQty, ExistingQty + foundCount, nNeeded)
+            else
+                Message('%1 serials successfully added.\nTotal assigned: %2 of %3',
+                    foundCount, ExistingQty + foundCount, nNeeded);
     end;
 }
