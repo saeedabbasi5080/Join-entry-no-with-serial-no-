@@ -257,3 +257,44 @@
 //         exit(''); // No available serial found
 //     end;
 // }
+
+
+
+// codeunit 50108 "Item Tracking Line Handler CZA"
+// {
+//     [EventSubscriber(ObjectType::Page, Page::"Item Tracking Lines", 'OnAfterValidateEvent', 'Serial No.', false, false)]
+//     local procedure UndoItemEntryRelationOnBeforeCollectTempTrackingSpecificationInsert(var Rec: Page "Item Tracking Lines"; xRec: page "Item Tracking Lines")
+//     var
+//         ItemEntryRelation: Record "Item Entry Relation";
+//     begin
+//         Message('OnAfterValidateEvent');
+
+//     end;
+// }
+
+codeunit 50108 "Item Tracking Line Handler CZA"
+{
+    // [EventSubscriber(ObjectType::Page, Page::"Item Tracking Lines", 'OnAfterValidateEvent', 'Serial No.', false, false)]
+    // local procedure OnAfterValidateSerialNo(var Rec: Record "Tracking Specification"; xRec: Record "Tracking Specification")
+    // begin
+    //     Message('Serial No. validated!');
+    // end;
+
+    // [EventSubscriber(ObjectType::Page, Page::"Item Tracking Lines", 'OnBeforeValidateEvent', 'Serial No.', false, false)]
+    // local procedure OnBeforeValidateSerialNo(var Rec: Record "Tracking Specification"; xRec: Record "Tracking Specification")
+    // begin
+    //     Message('Serial No. validation started!');
+    // end;
+
+    // [EventSubscriber(ObjectType::Page, Page::"Item Tracking Lines", 'OnValidateSerialNoOnBeforeFindLotNo', '', false, false)]
+    // local procedure OnValidateSerialNoOnBeforeFindLotNo(var TrackingSpecification: Record "Tracking Specification"; var IsHandled: Boolean)
+    // begin
+    //    tracking
+    // end;
+
+    procedure OnValidateSerialNoOnBeforeFindLotNo1(var TrackingSpecification: Record "Tracking Specification"; var IsHandled: Boolean)
+    begin
+        // Custom logic before finding Lot No.
+    end;
+
+}

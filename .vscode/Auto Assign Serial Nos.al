@@ -1,5 +1,52 @@
 pageextension 50120 ItemTrackingLinesExt extends "Item Tracking Lines"
 {
+
+    layout
+    {
+        modify("Serial No.")
+        {
+
+
+            ApplicationArea = All;
+            Caption = 'Entry No. (Serial No.)';
+
+            // trigger OnBeforeValidate()
+            // var
+            //     LotNo: Code[50];
+            //     IsHandled1: Boolean;
+            //     jhasjh: Codeunit "Item Tracking Line Handler CZA";
+            // begin
+            //     SerialNoOnAfterValidate();
+            //     if Rec."Serial No." <> '' then begin
+            //         IsHandled1 := false;
+            //         // The following line was removed because the procedure is inaccessible:
+            //         //OnValidateSerialNoOnBeforeFindLotNo(Rec, IsHandled1);
+            //         // Proceed as if IsHandled1 is always false
+
+            //         if not IsHandled1 then begin
+            //             ItemTrackingDataCollection.FindLotNoBySNSilent(LotNo, Rec);
+            //             Rec.Validate("Lot No.", LotNo);
+            //         end;
+            //         CurrPage.Update();
+            //     end;
+            // end;
+
+            trigger OnAfterValidate()
+            var
+                LotNo: Code[50];
+            begin
+                // SerialNoOnAfterValidate();
+                // if Rec."Serial No." <> '' then begin
+                //     ItemTrackingDataCollection.FindLotNoBySNSilent(LotNo, Rec);
+                //     Rec.Validate("Lot No.", LotNo);
+
+                //end;
+                // CurrPage.Update(true);
+            end;
+
+
+        }
+    }
     actions
     {
         addlast(processing)
@@ -11,12 +58,157 @@ pageextension 50120 ItemTrackingLinesExt extends "Item Tracking Lines"
                 ApplicationArea = All;
 
                 trigger OnAction()
+
+                var
+                    TrackingSpecification: Record "Tracking Specification" temporary;
+                    MySerials: array[2] of Code[50];
+                    MyLots: array[2] of Integer;
+                    TrackingSpec: Record "Tracking Specification";
+                    i: Integer;
+                    LineFilled: Boolean;
                 begin
-                    AssignSerialsFromLedgerSimple();
+                    // داده تستی
+                    MySerials[1] := 'SERIAL001';
+                    MySerials[2] := 'SERIAL002';
+                    MyLots[1] := 1;
+                    MyLots[2] := 2;
+
+                    // فرض: شرط اینکه فقط دو خط را پر کنیم
+                    for i := 1 to 2 do begin
+                        // LineFilled := false;
+                        // Rec.Reset();
+                        // شرط سرچ روی خطوط مرتبط با سند فعلی (در صورت نیاز فیلترهای مرتبط با Source Type/ID/Ref. No. اضافه کن)
+                        // TrackingSpec.SetRange("Source ID", Rec."Source ID");
+                        // TrackingSpec.SetRange("Source Ref. No.", Rec."Source Ref. No.");
+                        //with Rec do begin
+                        repeat
+                            if Rec."Serial No." = '' then begin
+                                Rec.Validate("Serial No.", MySerials[i]);
+                                Rec."Quantity (Base)" := MyLots[i];
+                                // Rec."Entry No." := i;
+                                // InsertSpecification1();
+
+
+                                // TrackingSpecification := Rec;
+                                // TrackingSpecification."Buffer Status" := 0;
+                                // TrackingSpecification.InitQtyToShip();
+                                // TrackingSpecification.Correction := false;
+                                // TrackingSpecification."Quantity actual Handled (Base)" := 0;
+                                // OnBeforeUpdateTrackingSpecification(Rec, TrackingSpecification);
+                                if Rec."Buffer Status" = Rec."Buffer Status"::MODIFY then
+                                    TrackingSpecification.Modify()
+                                else
+                                    TrackingSpecification.Insert();
+
+
+                                // Rec.InitTrackingSpecification();
+                                // Rec.SetTrackingBlank();
+                                // Rec.SetTrackingFilterFromItemLedgEntry();
+                                // Rec.SetTrackingFilterFromSpec(Rec);
+                                // Rec.TrackingExists();
+                                // Rec.AddLoadFields();
+                                // Clear(Rec);
+                                // CurrPage.Run();
+                                CurrPage.SaveRecord();
+                                CurrPage.SetRecord(Rec);
+                                CurrPage.SetTableView(Rec);
+                                CurrPage.Update(true);
+
+
+                                Rec.Next();
+
+
+
+                                //LineFilled := true;
+                            end;
+                        //CurrPage.update(true);
+                        until (rec.Next() = 0);
+                    end;
+                    Message('دو خط با مقادیر تستی پر شد.');
                 end;
+                //AssignSerialsFromLedgerSimple();
+                // FillTrackingSpecsManually();
+                //end;
             }
         }
     }
+
+
+    procedure InsertSpecification1()
+    var
+        TrackingSpecification: Record "Tracking Specification";
+    begin
+        // Rec.Reset();
+        if Rec.FindSet() then begin
+            repeat
+                TrackingSpecification := Rec;
+                TrackingSpecification."Buffer Status" := 0;
+                TrackingSpecification.InitQtyToShip();
+                TrackingSpecification.Correction := false;
+                TrackingSpecification."Quantity actual Handled (Base)" := 0;
+                OnBeforeUpdateTrackingSpecification(Rec, TrackingSpecification);
+                if Rec."Buffer Status" = TrackingSpecification."Buffer Status"::MODIFY then
+                    TrackingSpecification.Modify()
+                else
+                    TrackingSpecification.Insert();
+            until (Rec.Next() = 0);
+            Rec.DeleteAll();
+        end;
+    end;
+
+    // procedure ApplySerialNoLogic(var Rec: Record "Tracking Specification")
+    // var
+    //     LotNo: Code[50];
+    //     IsHandled: Boolean;
+
+    // begin
+    //     if Rec."Serial No." <> '' then begin
+    //         IsHandled := false;
+    //         OnValidateSerialNoOnBeforeFindLotNo1(Rec, IsHandled); // ایونت پابلیش می‌شود
+    //         if not IsHandled then begin
+    //             ItemTrackingDataCollection.FindLotNoBySNSilent(LotNo, Rec);
+    //             Rec.Validate("Lot No.", LotNo);
+    //         end;
+    //         // اگر لازم بود: CurrPage.Update(); را اینجا صدا بزن (در Page Extension)
+    //     end;
+    // end;
+
+
+
+    local procedure FillTrackingSpecsManually()
+    var
+        MySerials: array[2] of Code[50];
+        MyLots: array[2] of Integer;
+        TrackingSpec: Record "Tracking Specification";
+        i: Integer;
+        LineFilled: Boolean;
+    begin
+        // داده تستی
+        MySerials[1] := 'SERIAL001';
+        MySerials[2] := 'SERIAL002';
+        MyLots[1] := 1;
+        MyLots[2] := 2;
+
+        // فرض: شرط اینکه فقط دو خط را پر کنیم
+        for i := 1 to 2 do begin
+            LineFilled := false;
+            Rec.Reset();
+            // شرط سرچ روی خطوط مرتبط با سند فعلی (در صورت نیاز فیلترهای مرتبط با Source Type/ID/Ref. No. اضافه کن)
+            // TrackingSpec.SetRange("Source ID", Rec."Source ID");
+            // TrackingSpec.SetRange("Source Ref. No.", Rec."Source Ref. No.");
+            if Rec.FindSet() then
+                repeat
+                    if Rec."Serial No." = '' then begin
+                        Rec.Validate("Serial No.", MySerials[i]);
+                        Rec."Quantity (Base)" := MyLots[i];
+                        Rec.Modify();
+                        LineFilled := true;
+                        break;
+                    end;
+                until (TrackingSpec.Next() = 0) or LineFilled;
+        end;
+        Message('دو خط با مقادیر تستی پر شد.');
+    end;
 
     local procedure AssignSerialsFromLedgerSimple()
     var
@@ -66,7 +258,7 @@ pageextension 50120 ItemTrackingLinesExt extends "Item Tracking Lines"
             until TrackingSpec.Next() = 0;
 
         // 4. Calculate remaining quantity
-        nNeeded := Abs(CurrentSalesLine."Quantity (Base)");
+        nNeeded := CurrentSalesLine."Qty. to Ship";
         RemainingQty := nNeeded - ExistingQty;
 
         if RemainingQty <= 0 then begin
@@ -151,10 +343,11 @@ pageextension 50120 ItemTrackingLinesExt extends "Item Tracking Lines"
                     // Rec."Warranty Date" := ItemLedgEntry."Warranty Date";
                     // Rec."Creation Date" := Today;
 
-                    Rec.Insert();
+                    // Rec.Insert();
                     foundCount += 1;
                     NextEntryNo += 1;
                 end;
+                CurrPage.Update(true);
             until ItemLedgEntry.Next() = 0;
 
         // 7. Show result
@@ -168,4 +361,13 @@ pageextension 50120 ItemTrackingLinesExt extends "Item Tracking Lines"
                 Message('%1 serials successfully added.\nTotal assigned: %2 of %3',
                     foundCount, ExistingQty + foundCount, nNeeded);
     end;
+
+
+
+    [IntegrationEvent(false, false)]
+    local procedure OnBeforeUpdateTrackingSpecification(var TrackingSpecRec: Record "Tracking Specification"; var TrackingSpec: Record "Tracking Specification")
+    begin
+    end;
+
+
 }
