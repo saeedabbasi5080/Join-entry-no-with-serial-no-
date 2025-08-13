@@ -175,22 +175,24 @@ pageextension 50123 ItemTrackLinePageExt extends "Item Tracking Lines"
     trigger OnDeleteRecord(): Boolean
     begin
         if (AutoAssignMode) then begin
+            // بدون در نظر گرفتن اینکه رکورد در TempTrackingSpecificationInsert هست یا نه، آن را به TempTrackingSpecificationDelete اضافه کنیم
+            TempTrackingSpecificationDelete.Init();
+            TempTrackingSpecificationDelete.TransferFields(Rec);
+            TempTrackingSpecificationDelete.Insert();
+
+            // به روز رسانی TempItemTrackLineDelete
+            TempItemTrackLineDelete.Init();
+            TempItemTrackLineDelete.TransferFields(Rec);
+            TempItemTrackLineDelete.Insert();
+
+            // اگر رکورد در TempTrackingSpecificationInsert وجود داشت، آن را حذف کنیم
+            TempTrackingSpecificationInsert.Reset();
             TempTrackingSpecificationInsert.SetRange("Serial No.", Rec."Serial No.");
-            if (TempTrackingSpecificationInsert.FindFirst()) then begin
+            if (TempTrackingSpecificationInsert.FindFirst()) then
                 TempTrackingSpecificationInsert.Delete();
 
-                TempTrackingSpecificationDelete.Init();
-                TempTrackingSpecificationDelete.TransferFields(Rec);
-                TempTrackingSpecificationDelete.Insert();
-
-                // به روز رسانی TempItemTrackLineDelete
-                TempItemTrackLineDelete.Init();
-                TempItemTrackLineDelete.TransferFields(Rec);
-                TempItemTrackLineDelete.Insert();
-
-                // به روز رسانی TempItemTrackLineModify
-                UpdateTrackingLineModify();
-            end;
+            // به روز رسانی TempItemTrackLineModify
+            UpdateTrackingLineModify();
         end;
 
         exit(true);
